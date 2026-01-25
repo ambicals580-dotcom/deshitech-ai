@@ -29,3 +29,32 @@ async def chat(request: Request):
     save_memory(memory)
 
     return {"reply": reply}
+def code_generator(message):
+    if "html" in message and "login" in message:
+        return """Here is a simple HTML login page:
+
+```html
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Login</h2>
+<form>
+  <input type="text" placeholder="Username"><br><br>
+  <input type="password" placeholder="Password"><br><br>
+  <button>Login</button>
+</form>
+</body>
+</html>
+```"""
+
+    if "python" in message:
+        return """Here is a basic Python example:
+
+```python
+def greet(name):
+    return f"Hello {name}"
+
+print(greet("India"))
+```"""
+
+    return "Tell me what kind of code you want (HTML, Python, app, website)."
