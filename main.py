@@ -1,25 +1,50 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+import json
+import os
 
 app = FastAPI()
 
-class ChatRequest(BaseModel):
-    message: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+MEMORY_FILE = "memory.json"
+
+def load_memory():
+    if not os.path.exists(MEMORY_FILE):
+        return []
+    with open(MEMORY_FILE, "r") as f:
+        return json.load(f)
+
+def save_memory(memory):
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(memory, f, indent=2)
 
 @app.get("/")
-def root():
+def home():
     return {"status": "DESHITECH AI running"}
 
 @app.post("/chat")
-def chat(req: ChatRequest):
-    user_msg = req.message.lower()
+async def chat(request: Request):
+    data = await request.json()
+    user_msg = data.get("message", "")
 
-    # simple brain (logic layer)
-    if "hello" in user_msg:
-        reply = "Hello SIR 👋 I am RAM, your AI assistant."
-    elif "who are you" in user_msg:
-        reply = "I am RAM, designed by Ambicals – A Tech Group."
-    else:
-        reply = f"You said: {req.message}"
+    memory = load_memory()
 
-    return {"reply": reply}
+    reply = f"You said: {user_msg}. I remember {len(memory)} things."
+
+    memory.append({
+        "user": user_msg,
+        "ai": reply
+    })
+
+    save_memory(memory)
+
+    return {
+        "reply": reply,
+        "memory_count": len(memory)
+    }
