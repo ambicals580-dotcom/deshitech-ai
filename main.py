@@ -1,24 +1,37 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+import json, os
 
 app = FastAPI()
 
-@app.get("/")
+MEMORY_FILE = "memory.json"
+
+def load_memory():
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_memory(data):
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(data, f)
+
+@app.get("/", response_class=HTMLResponse)
 def home():
-    return {"status": "DESHITECH AI is running 🇮🇳"}
+    with open("index.html", "r") as f:
+        return f.read()
 
 @app.post("/chat")
 async def chat(request: Request):
-    try:
-        data = await request.json()
-        message = data.get("message", "").strip()
+    data = await request.json()
+    message = data.get("message", "")
 
-        if not message:
-            return JSONResponse(status_code=400, content={"error": "Empty message"})
+    memory = load_memory()
+    memory.append({"user": message})
 
-        reply = f"DESHITECH AI 🇮🇳 says: {message}"
+    reply = f"DESHITECH AI 🇮🇳 says: {message}"
 
-        return {"reply": reply}
+    memory.append({"ai": reply})
+    save_memory(memory)
 
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    return {"reply": reply}
