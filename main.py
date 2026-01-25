@@ -47,4 +47,4 @@ async def chat(request: Request):
     return {
         "reply": reply,
         "memory_count": len(memory)
-    }
+    } 
