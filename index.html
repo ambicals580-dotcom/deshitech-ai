@@ -3,25 +3,33 @@
 <head>
   <title>DESHITECH AI</title>
 </head>
-<body style="font-family:Arial; text-align:center; margin-top:50px;">
+<body style="font-family:Arial;text-align:center;margin-top:40px;">
 
-<h1>DESHITECH AI</h1>
-<p>Designed by Ambicals – A Tech Group</p>
+<img src="https://i.imgur.com/your-logo.png" width="120"><br><br>
 
-<input id="msg" placeholder="Type your message" style="width:70%; padding:10px;">
+<h1>DESHITECH AI 🇮🇳</h1>
+<p>Designed by VISHIST AMBASTHA</p>
+
+<input id="msg" placeholder="Type your message"
+ style="width:70%;padding:10px;">
 <br><br>
-<button onclick="send()" style="padding:10px 20px;">Send</button>
 
-<p id="out" style="margin-top:20px; font-weight:bold;"></p>
+<button onclick="send()" style="padding:10px 20px;">
+Send
+</button>
+
+<p id="out" style="margin-top:20px;font-weight:bold;"></p>
 
 <script>
 async function send(){
   let m = document.getElementById("msg").value;
+
   let r = await fetch("/chat", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({message: m})
   });
+
   let d = await r.json();
   document.getElementById("out").innerText = d.reply;
 }
@@ -29,6 +37,3 @@ async function send(){
 
 </body>
 </html>
-@app.get("/chat")
-def chat_info():
-    return {"info": "Use POST method with JSON {message: 'your text'}"} 
