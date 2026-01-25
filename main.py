@@ -8,13 +8,8 @@ class Chat(BaseModel):
 
 @app.get("/")
 def root():
-    return {
-        "name": "DESHITECH AI",
-        "status": "running"
-    }
+    return {"status": "DESHITECH AI running"}
 
 @app.post("/chat")
 def chat(data: Chat):
-    return {
-        "reply": f"You said: {data.message}"
-    }
+    return {"reply": f"You said: {data.message}"}
