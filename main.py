@@ -1,104 +1,95 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-import json, os
+import openai
+import os
+import json
 
-app = FastAPI(title="DESHITECH AI 🇮🇳")
+app = FastAPI()
+
+# Load OpenAI key from Render environment
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 MEMORY_FILE = "memory.json"
 
-# ---------- MEMORY ----------
+# ---------------- MEMORY ----------------
 def load_memory():
     if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, "r") as f:
-                return json.load(f)
-        except:
-            return []
+        with open(MEMORY_FILE, "r") as f:
+            return json.load(f)
     return []
 
-def save_memory(data, limit=100):
+def save_memory(memory, limit=30):
+    memory = memory[-limit:]
     with open(MEMORY_FILE, "w") as f:
-        json.dump(data[-limit:], f, indent=2)
+        json.dump(memory, f, indent=2)
 
-# ---------- AI LOGIC ----------
-def deshitech_ai(message: str):
-    msg = message.lower()
+# ---------------- AI CORE ----------------
+def ask_llm(message, memory):
+    messages = [
+        {"role": "system", "content": "You are DESHITECH AI 🇮🇳 — intelligent, helpful, expert in code, images, videos, and guidance."}
+    ]
 
-    if any(k in msg for k in ["html", "login"]):
-        return """Here is a simple HTML login page:
+    for m in memory:
+        messages.append(m)
 
-```html
-<!DOCTYPE html>
-<html>
-<body>
-<h2>Login</h2>
-<input placeholder="Username"><br><br>
-<input type="password" placeholder="Password"><br><br>
-<button>Login</button>
-</body>
-</html>
-```"""
+    messages.append({"role": "user", "content": message})
 
-    if "python" in msg:
-        return """Python example:
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.6
+    )
 
-```python
-def greet(name):
-    return f"Hello {name}"
+    return response.choices[0].message.content
 
-print(greet("DESHITECH"))
-```"""
-
-    if any(k in msg for k in ["image", "logo", "design"]):
-        return (
-            'AI Image Prompt:\n'
-            '"A modern tech logo, professional, clean background, '
-            '4k quality, futuristic, minimal design"'
-        )
-
-    if any(k in msg for k in ["video", "reel", "short"]):
-        return (
-            "Video Creation Guide:\n"
-            "1. Hook (first 3 seconds)\n"
-            "2. Problem\n"
-            "3. Solution\n"
-            "4. Call to Action"
-        )
-
-    if any(k in msg for k in ["guide", "how", "steps"]):
-        return (
-            "Step-by-step guide:\n"
-            "1. Understand the requirement\n"
-            "2. Break into small parts\n"
-            "3. Build one by one\n"
-            "4. Test\n"
-            "5. Improve"
-        )
-
-    return "🇮🇳 DESHITECH AI ready. Ask for code, images, videos, or guidance."
-
-# ---------- ROUTES ----------
+# ---------------- ROUTES ----------------
 @app.get("/", response_class=HTMLResponse)
 def home():
-    if os.path.exists("index.html"):
-        return open("index.html").read()
-    return "<h1>DESHITECH AI backend running</h1>"
+    return """
+    <html>
+    <head>
+        <title>DESHITECH AI</title>
+        <style>
+            body{background:#0f172a;color:white;font-family:Arial;text-align:center}
+            input{width:70%;padding:12px;border-radius:6px}
+            button{padding:12px 20px;margin-top:10px;background:#22c55e;border:none;border-radius:6px}
+        </style>
+    </head>
+    <body>
+        <h1>DESHITECH AI 🇮🇳</h1>
+        <p>India's Intelligence, Powered by AI</p>
+        <input id="msg" placeholder="Ask anything...">
+        <br>
+        <button onclick="send()">Send</button>
+        <pre id="out"></pre>
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+        <script>
+        async function send(){
+            let m = document.getElementById("msg").value;
+            let r = await fetch("/chat", {
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({message:m})
+            });
+            let d = await r.json();
+            document.getElementById("out").innerText = d.reply;
+        }
+        </script>
+    </body>
+    </html>
+    """
 
 @app.post("/chat")
-async def chat(request: Request):
-    data = await request.json()
-    message = data.get("message", "")
+async def chat(req: Request):
+    data = await req.json()
+    user_message = data.get("message")
 
     memory = load_memory()
-    memory.append({"user": message})
+    memory.append({"role": "user", "content": user_message})
 
-    reply = deshitech_ai(message)
+    reply = ask_llm(user_message, memory)
 
-    memory.append({"ai": reply})
+    memory.append({"role": "assistant", "content": reply})
     save_memory(memory)
 
     return {"reply": reply}
