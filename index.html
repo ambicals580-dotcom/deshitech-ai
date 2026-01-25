@@ -5,71 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
-<body style="
-  font-family:Arial, sans-serif;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:white;
-">
+<body style="margin:0;font-family:Arial;background:#0b0b0b;color:white;">
 
-<div style="
-  background:#111;
-  padding:30px;
-  border-radius:15px;
-  width:100%;
-  max-width:600px;
-  box-shadow:0 0 30px rgba(0,0,0,0.6);
-">
+<header style="padding:20px;text-align:center;border-bottom:1px solid #222;">
+  <img src="/logo.png" width="90"><br>
+  <h2>DESHITECH AI 🇮🇳</h2>
+  <p style="color:#aaa;">Designed by VISHIST AMBASTHA</p>
+</header>
 
-  <!-- LOGO -->
-  <img src="/logo.png" alt="DESHITECH AI Logo"
-       style="width:120px;display:block;margin:auto;margin-bottom:15px;">
+<main style="max-width:800px;margin:auto;padding:20px;">
 
-  <h1 style="margin-bottom:5px;">DESHITECH AI 🇮🇳</h1>
-  <p style="color:#aaa;margin-top:0;">
-    Designed by <b>VISHIST AMBASTHA</b>
-  </p>
+  <div style="margin-bottom:15px;">
+    <button onclick="preset('Create HTML login page')" class="opt">💻 Code</button>
+    <button onclick="preset('Guide me step by step')" class="opt">🧭 Guide</button>
+    <button onclick="preset('Generate logo design prompt')" class="opt">🎨 Image</button>
+    <button onclick="preset('Create short video idea')" class="opt">🎬 Video</button>
+  </div>
 
-  <textarea id="msg" rows="3"
-    placeholder="Ask me for code, guidance, image or video ideas..."
-    style="
-      width:100%;
-      padding:12px;
-      border-radius:8px;
-      border:none;
-      outline:none;
-      font-size:15px;
-      margin-top:15px;
-    "></textarea>
+  <textarea id="msg" rows="4"
+    placeholder="Ask DESHITECH AI anything..."
+    style="width:100%;padding:12px;border-radius:8px;border:none;"></textarea>
 
   <button onclick="send()" style="
-    width:100%;
-    margin-top:15px;
-    padding:12px;
-    font-size:16px;
-    background:#00c6ff;
-    border:none;
-    border-radius:8px;
+    width:100%;margin-top:10px;
+    padding:14px;font-size:16px;
+    background:#1abc9c;border:none;border-radius:8px;
     cursor:pointer;
-    font-weight:bold;
   ">
-    Ask DESHITECH
+    Ask DESHITECH AI
   </button>
 
   <div id="out" style="
     margin-top:20px;
-    background:#1e1e1e;
+    background:#151515;
     padding:15px;
     border-radius:8px;
     white-space:pre-wrap;
   "></div>
 
-</div>
+</main>
+
+<style>
+.opt{
+  padding:8px 12px;
+  margin:4px;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
+  background:#222;
+  color:white;
+}
+.opt:hover{background:#333;}
+</style>
 
 <script>
+function preset(text){
+  document.getElementById("msg").value = text;
+}
+
 async function send(){
   let m = document.getElementById("msg").value;
   if(!m) return;
@@ -77,9 +70,9 @@ async function send(){
   document.getElementById("out").innerText = "Thinking...";
 
   let r = await fetch("/chat", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({message:m})
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:m})
   });
 
   let d = await r.json();
