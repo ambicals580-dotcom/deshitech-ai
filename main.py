@@ -58,3 +58,22 @@ print(greet("India"))
 ```"""
 
     return "Tell me what kind of code you want (HTML, Python, app, website)."
+def image_prompt_generator(message):
+    return f"""Here is an AI image prompt you can use:
+
+"A high-quality {message}, modern style, clean background, professional, detailed, 4k, realistic lighting"
+"""
+
+def video_prompt_generator(message):
+    return f"""Here is a short video creation guide:
+
+🎬 Video Idea: {message}
+
+Scene 1: Strong hook (first 3 seconds)
+Scene 2: Show the problem
+Scene 3: Present solution
+Scene 4: Call to action
+
+Voice-over: Clear, confident, friendly
+Style: Modern, fast-paced
+"""
