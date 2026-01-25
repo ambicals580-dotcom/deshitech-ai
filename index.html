@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DESHITECH AI</title>
+</head>
+<body style="font-family:Arial; text-align:center; margin-top:50px;">
+
+<h1>DESHITECH AI</h1>
+<p>Designed by Ambicals – A Tech Group</p>
+
+<input id="msg" placeholder="Type your message" style="width:70%; padding:10px;">
+<br><br>
+<button onclick="send()" style="padding:10px 20px;">Send</button>
+
+<p id="out" style="margin-top:20px; font-weight:bold;"></p>
+
+<script>
+async function send(){
+  let m = document.getElementById("msg").value;
+  let r = await fetch("/chat", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({message: m})
+  });
+  let d = await r.json();
+  document.getElementById("out").innerText = d.reply;
+}
+</script>
+
+</body>
+</html>
