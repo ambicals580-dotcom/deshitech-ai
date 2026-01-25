@@ -13,9 +13,10 @@ def load_memory():
             return json.load(f)
     return []
 
-def save_memory(data):
+def save_memory(data, limit=50):
+    data = data[-limit:]  # keep only last 50 messages
     with open(MEMORY_FILE, "w") as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=2)
 
 # ---------- GENERATORS ----------
 def code_generator(message):
