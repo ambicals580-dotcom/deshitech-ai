@@ -1,35 +1,29 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse
-import json, os
-
-app = FastAPI()
-
-MEMORY_FILE = "memory.json"
-
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_memory(data):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(data, f)
-
-@app.get("/", response_class=HTMLResponse)
-def home():
-    with open("index.html", "r") as f:
-        return f.read()
-
 @app.post("/chat")
 async def chat(request: Request):
     data = await request.json()
-    message = data.get("message", "")
+    message = data.get("message", "").lower()
 
+    # Load memory
     memory = load_memory()
     memory.append({"user": message})
 
-    reply = f"DESHITECH AI 🇮🇳 says: {message}"
+    reply = ""
+
+    # INTENT DETECTION
+    if any(word in message for word in ["code", "html", "python", "website", "app"]):
+        reply = code_generator(message)
+
+    elif any(word in message for word in ["guide", "steps", "how", "explain"]):
+        reply = guide_generator(message)
+
+    elif any(word in message for word in ["image", "logo", "design", "poster"]):
+        reply = image_prompt_generator(message)
+
+    elif any(word in message for word in ["video", "reel", "short", "animation"]):
+        reply = video_prompt_generator(message)
+
+    else:
+        reply = f"DESHITECH AI 🇮🇳 here to help. Ask me for code, guidance, images, or videos."
 
     memory.append({"ai": reply})
     save_memory(memory)
