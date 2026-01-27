@@ -1,84 +1,117 @@
-import os, json
+import os, json, uuid
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 
----------- CONFIG ----------
-
+# ---------------- CONFIG ----------------
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-MEMORY_FILE = "memory.json"
-
-app = FastAPI()
+app = FastAPI(title="DESHITECH AI 🇮🇳")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
----------- MEMORY ----------
+MEMORY_FILE = "memory.json"
 
+# ---------------- MEMORY ----------------
 def load_memory():
-if os.path.exists(MEMORY_FILE):
-with open(MEMORY_FILE, "r") as f:
-return json.load(f)
-return []
+    if os.path.exists(MEMORY_FILE):
+        return json.load(open(MEMORY_FILE))
+    return {}
 
-def save_memory(data, limit=100):
-with open(MEMORY_FILE, "w") as f:
-json.dump(data[-limit:], f, indent=2)
+def save_memory(mem):
+    json.dump(mem, open(MEMORY_FILE, "w"), indent=2)
 
----------- HOME ----------
+# ---------------- AI CORE ----------------
+def ask_llm(messages):
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.6
+    )
+    return res.choices[0].message.content
 
+# ---------------- UI ----------------
 @app.get("/", response_class=HTMLResponse)
 def home():
-return """
+    return """
+<!DOCTYPE html>
+<html>
+<head>
+<title>DESHITECH AI</title>
+<style>
+body{margin:0;background:#020617;color:white;font-family:Arial}
+header{display:flex;align-items:center;padding:15px;border-bottom:1px solid #1e293b}
+header img{height:40px;margin-right:10px}
+main{padding:20px}
+input,select{width:80%;padding:14px;border-radius:8px;border:none;margin-top:10px}
+button{padding:14px 22px;background:#22c55e;border:none;border-radius:8px;margin-top:10px;cursor:pointer}
+pre{background:#020617;padding:15px;border-radius:8px;white-space:pre-wrap;margin-top:15px}
+</style>
+</head>
+<body>
 
-<!DOCTYPE html>  <html>  
-<head>  
-<title>DESHITECH AI</title>  
-<style>  
-body{margin:0;background:#020617;color:white;font-family:Arial}  
-header{display:flex;align-items:center;padding:15px;border-bottom:1px solid #1e293b}  
-header img{height:40px;margin-right:10px}  
-main{padding:20px}  
-input{width:80%;padding:14px;border-radius:8px;border:none}  
-button{padding:14px 20px;background:#22c55e;border:none;border-radius:8px;cursor:pointer}  
-pre{margin-top:15px;white-space:pre-wrap}  
-</style>  
-</head>  
-<body>  <header>  
-<img src="/static/logo.png">  
-<h2>DESHITECH AI 🇮🇳</h2>  
-</header>  <main>  
-<h3>Ask me anything</h3>  
-<input id="msg" placeholder="Code, image idea, video idea, guidance...">  
-<button onclick="send()">Send</button>  
-<pre id="out"></pre>  
-</main>  <script>  
-async function send(){  
- let m=document.getElementById("msg").value;  
- let r=await fetch("/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});  
- let d=await r.json();  
- document.getElementById("out").innerText=d.reply;  
-}  
-</script>  </body>  
-</html>  
-"""  ---------- CHAT ----------
+<header>
+<img src="/static/logo.png">
+<h2>DESHITECH AI 🇮🇳</h2>
+</header>
 
-@app.post("/chat")
-async def chat(req: Request):
-data = await req.json()
-user_msg = data.get("message","")
+<main>
+<select id="mode">
+<option value="chat">Chat</option>
+<option value="image">Image</option>
+<option value="video">Video</option>
+</select>
 
-memory = load_memory()  
-memory.append({"role":"user","content":user_msg})  
+<input id="msg" placeholder="Ask anything...">
+<button onclick="send()">Send</button>
+<pre id="out"></pre>
+</main>
 
-response = client.chat.completions.create(  
-    model="gpt-4o-mini",  
-    messages=memory  
-)  
+<script>
+let uid = localStorage.getItem("uid") || (localStorage.setItem("uid",crypto.randomUUID()), localStorage.getItem("uid"));
 
-reply = response.choices[0].message.content  
-memory.append({"role":"assistant","content":reply})  
-save_memory(memory)  
+async function send(){
+ let mode=document.getElementById("mode").value;
+ let msg=document.getElementById("msg").value;
 
-return {"reply": reply}
+ let r=await fetch("/api",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid,mode,message:msg})});
+ let d=await r.json();
+ document.getElementById("out").innerText=d.reply;
+}
+</script>
 
-Please give me code with better ui and login panel
+</body>
+</html>
+"""
+
+# ---------------- API ----------------
+@app.post("/api")
+async def api(req: Request):
+    data = await req.json()
+    uid = data["uid"]
+    mode = data["mode"]
+    msg = data["message"]
+
+    memory = load_memory()
+    user_mem = memory.get(uid, [])
+    user_mem.append({"role":"user","content":msg})
+
+    if mode == "image":
+        reply = f'Image prompt:\\n"A professional {msg}, cinematic lighting, ultra-detailed, 4k"'
+
+    elif mode == "video":
+        reply = f"""Video Script for {msg}:
+1. Hook (3 sec)
+2. Problem
+3. Solution
+4. CTA
+Style: modern, fast-paced"""
+
+    else:
+        system = {"role":"system","content":"You are DESHITECH AI 🇮🇳, expert in code, startups, AI, guidance."}
+        reply = ask_llm([system]+user_mem[-10:])
+
+    user_mem.append({"role":"assistant","content":reply})
+    memory[uid] = user_mem[-50:]
+    save_memory(memory)
+
+    return {"reply": reply}
