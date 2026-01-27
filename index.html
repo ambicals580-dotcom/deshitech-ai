@@ -2,28 +2,33 @@
 <html>
 <head>
   <title>DESHITECH AI</title>
+  <style>
+    body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
+    input, button { padding:10px; width:70%; margin:10px; }
+    button { background:#22c55e; border:none; cursor:pointer; }
+    pre { text-align:left; background:#020617; padding:15px; width:80%; margin:auto; }
+  </style>
 </head>
-<body style="font-family:Arial;text-align:center;margin-top:40px;">
+<body>
 
 <h1>DESHITECH AI 🇮🇳</h1>
-<p>Built by <b>VISHIST AMBASTHA</b></p>
+<p>Created by <b>VISHIST AMBASTHA</b></p>
 
-<input id="msg" placeholder="Ask anything..." style="width:70%;padding:10px;">
-<br><br>
-<button onclick="send()">Send</button>
+<input id="msg" placeholder="Ask anything..." />
+<button onclick="send()">Chat</button>
 
-<pre id="out" style="margin-top:20px;text-align:left;width:80%;margin:auto;"></pre>
+<pre id="out"></pre>
 
 <script>
 async function send(){
-  let m = document.getElementById("msg").value;
+  let m = msg.value;
   let r = await fetch("/chat", {
     method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({message:m})
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ message:m })
   });
   let d = await r.json();
-  document.getElementById("out").innerText = d.reply;
+  out.innerText = d.reply;
 }
 </script>
 
