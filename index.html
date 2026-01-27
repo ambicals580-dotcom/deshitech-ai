@@ -2,70 +2,28 @@
 <html>
 <head>
   <title>DESHITECH AI</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .box {
-      width: 400px;
-      background: #020617;
-      padding: 20px;
-      border-radius: 10px;
-    }
-    h1 {
-      text-align: center;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      margin-top: 10px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    pre {
-      background: #020617;
-      padding: 10px;
-      margin-top: 15px;
-      white-space: pre-wrap;
-      border-radius: 5px;
-    }
-  </style>
 </head>
-<body>
+<body style="font-family:Arial;text-align:center;margin-top:40px;">
 
-<div class="box">
-  <h1>DESHITECH AI 🇮🇳</h1>
-  <input id="msg" placeholder="Ask anything..." />
-  <button onclick="send()">Send</button>
-  <pre id="out"></pre>
-</div>
+<h1>DESHITECH AI 🇮🇳</h1>
+<p>Built by <b>VISHIST AMBASTHA</b></p>
+
+<input id="msg" placeholder="Ask anything..." style="width:70%;padding:10px;">
+<br><br>
+<button onclick="send()">Send</button>
+
+<pre id="out" style="margin-top:20px;text-align:left;width:80%;margin:auto;"></pre>
 
 <script>
-async function send() {
-  let msg = document.getElementById("msg").value;
-  let res = await fetch("/chat", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({message: msg})
+async function send(){
+  let m = document.getElementById("msg").value;
+  let r = await fetch("/chat", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:m})
   });
-  let data = await res.json();
-  document.getElementById("out").textContent = data.reply;
+  let d = await r.json();
+  document.getElementById("out").innerText = d.reply;
 }
 </script>
 
