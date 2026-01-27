@@ -1,95 +1,71 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
-import json, os
+from fastapi.responses import HTMLResponse, JSONResponse
+import os, json
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI(title="DESHITECH AI")
 
 MEMORY_FILE = "memory.json"
+MAX_MEMORY = 20
 
-# ---------------- MEMORY ----------------
+# ---------- MEMORY ----------
 def load_memory():
     if os.path.exists(MEMORY_FILE):
         with open(MEMORY_FILE, "r") as f:
             return json.load(f)
     return []
 
-def save_memory(data, limit=50):
+def save_memory(mem):
     with open(MEMORY_FILE, "w") as f:
-        json.dump(data[-limit:], f, indent=2)
+        json.dump(mem[-MAX_MEMORY:], f, indent=2)
 
-# ---------------- GENERATORS ----------------
-def code_generator(msg):
-    if "html" in msg:
-        return """HTML Example:
-```html
-<!DOCTYPE html>
-<html>
-<body>
-<h1>Hello DESHITECH AI</h1>
-</body>
-</html>
-```"""
-    if "python" in msg:
-        return """Python Example:
-```python
-def greet(name):
-    return f"Hello {name}"
-print(greet("India"))
-```"""
-    return "Tell me what code you want (HTML / Python)."
-
-def guide_generator(msg):
-    return f"""Step-by-step guide for: {msg}
-
-1. Understand the problem
-2. Choose tools
-3. Build small
-4. Test
-5. Improve
-"""
-
-def image_prompt_generator(msg):
-    return f"""AI Image Prompt:
-"A high quality {msg}, ultra realistic, professional lighting, clean background, 4K"
-"""
-
-def video_prompt_generator(msg):
-    return f"""Video Plan for: {msg}
-
-Scene 1: Hook (3s)
-Scene 2: Problem
-Scene 3: Solution
-Scene 4: CTA
-"""
-
-# ---------------- ROUTES ----------------
+# ---------- ROUTES ----------
 @app.get("/", response_class=HTMLResponse)
 def home():
-    with open("index.html", "r") as f:
-        return f.read()
+    return open("index.html").read()
 
 @app.post("/chat")
-async def chat(request: Request):
-    data = await request.json()
-    msg = data.get("message", "").lower()
+async def chat(req: Request):
+    data = await req.json()
+    user_msg = data.get("message", "")
 
     memory = load_memory()
-    memory.append({"user": msg})
 
-    if "your name" in msg or "who are you" in msg:
-        reply = "I am DESHITECH AI 🇮🇳, created by VISHIST AMBASTHA."
-    elif any(w in msg for w in ["code", "html", "python"]):
-        reply = code_generator(msg)
-    elif any(w in msg for w in ["guide", "steps", "how"]):
-        reply = guide_generator(msg)
-    elif any(w in msg for w in ["image", "logo", "design"]):
-        reply = image_prompt_generator(msg)
-    elif any(w in msg for w in ["video", "reel", "short"]):
-        reply = video_prompt_generator(msg)
-    else:
-        reply = "Ask me for code, guides, image ideas, or video plans."
+    system_prompt = (
+        "You are DESHITECH AI, an independent Indian AI assistant. "
+        "You are NOT ChatGPT. You are created and owned by VISHIST AMBASTHA. "
+        "Never mention OpenAI or ChatGPT. Be helpful, clear, and concise."
+    )
 
-    memory.append({"ai": reply})
+    messages = [{"role": "system", "content": system_prompt}]
+    for m in memory:
+        messages.append(m)
+    messages.append({"role": "user", "content": user_msg})
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.7
+    )
+
+    reply = response.choices[0].message.content
+
+    memory.append({"role": "user", "content": user_msg})
+    memory.append({"role": "assistant", "content": reply})
     save_memory(memory)
 
     return {"reply": reply}
+
+@app.post("/image")
+async def image(req: Request):
+    prompt = (await req.json()).get("prompt", "")
+
+    img = client.images.generate(
+        model="gpt-image-1",
+        prompt=prompt,
+        size="1024x1024"
+    )
+
+    return {"image_url": img.data[0].url}
