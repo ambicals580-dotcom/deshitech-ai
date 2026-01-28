@@ -1,36 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>DESHITECH AI</title>
-  <style>
-    body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
-    input, button { padding:10px; width:70%; margin:10px; }
-    button { background:#22c55e; border:none; cursor:pointer; }
-    pre { text-align:left; background:#020617; padding:15px; width:80%; margin:auto; }
-  </style>
-</head>
-<body>
-
 <h1>DESHITECH AI 🇮🇳</h1>
-<p>Created by <b>VISHIST AMBASTHA</b></p>
+<p>Created by VISHIST AMBASTHA</p>
 
-<input id="msg" placeholder="Ask anything..." />
-<button onclick="send()">Chat</button>
-
+<input id="msg">
+<button onclick="send()">Send</button>
 <pre id="out"></pre>
 
 <script>
+const user_id = new URLSearchParams(window.location.search).get("user_id");
+
 async function send(){
   let m = msg.value;
   let r = await fetch("/chat", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ message:m })
+    body:JSON.stringify({ message:m, user_id:user_id })
   });
   let d = await r.json();
-  out.innerText = d.reply;
+  out.innerText += "\n" + d.reply;
 }
 </script>
-
-</body>
-</html>
