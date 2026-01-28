@@ -1,11 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, create_engine
+from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./deshitech.db"
-
 engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
+    "sqlite:///./deshitech.db",
+    connect_args={"check_same_thread": False}
 )
 
 SessionLocal = sessionmaker(bind=engine)
@@ -14,7 +13,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, unique=True)
     password = Column(String)
 
 class Memory(Base):
