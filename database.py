@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -13,7 +13,7 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, index=True)
     password = Column(String)
 
