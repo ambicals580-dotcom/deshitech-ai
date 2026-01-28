@@ -1,13 +1,29 @@
 <h2>DESHITECH AI Login</h2>
-<form action="/login" method="post">
-  <input name="email" placeholder="Email"><br>
-  <input name="password" type="password" placeholder="Password"><br>
-  <button>Login</button>
-</form>
 
-<h3>Register</h3>
-<form action="/register" method="post">
-  <input name="email"><br>
-  <input name="password" type="password"><br>
-  <button>Register</button>
-</form>
+<input id="email" placeholder="Email"><br>
+<input id="password" type="password" placeholder="Password"><br>
+
+<button onclick="login()">Login</button>
+<button onclick="register()">Register</button>
+
+<script>
+async function login(){
+  let r = await fetch("/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+    body:`email=${email.value}&password=${password.value}`
+  });
+  let d = await r.json();
+  localStorage.setItem("token", d.token);
+  window.location="/chat-ui";
+}
+
+async function register(){
+  await fetch("/register", {
+    method:"POST",
+    headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+    body:`email=${email.value}&password=${password.value}`
+  });
+  alert("Registered. Now login.");
+}
+</script>
