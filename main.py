@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends, Form, HTTPException
+from fastapi import FastAPI, Request, Depends, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from openai import OpenAI
@@ -12,7 +12,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI(title="DESHITECH AI")
 
-# ---------- DB ----------
 def get_db():
     db = SessionLocal()
     try:
@@ -20,7 +19,6 @@ def get_db():
     finally:
         db.close()
 
-# ---------- PAGES ----------
 @app.get("/", response_class=HTMLResponse)
 def login_page():
     return open("login.html").read()
@@ -29,54 +27,66 @@ def login_page():
 def chat_ui():
     return open("index.html").read()
 
-# ---------- AUTH ----------
 @app.post("/register")
 def register(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = User(email=email, password=hash_password(password))
     db.add(user)
     db.commit()
-    return {"message": "Registered successfully"}
+    return {"ok": True}
 
 @app.post("/login")
 def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        return JSONResponse({"error": "Invalid login"}, status_code=401)
 
     token = create_token({"user_id": user.id})
     return {"token": token}
 
-# ---------- CHAT ----------
 @app.post("/chat")
 async def chat(request: Request, db: Session = Depends(get_db)):
-    data = await request.json()
-    token = data.get("token")
-    message = data.get("message")
+    try:
+        data = await request.json()
+        token = data.get("token")
+        text = data.get("message")
 
-    payload = decode_token(token)
-    user_id = payload["user_id"]
+        if not token:
+            return {"reply": "⚠️ Login expired. Please login again."}
 
-    memories = db.query(Memory).filter(Memory.user_id == user_id).all()
+        payload = decode_token(token)
+        if not payload:
+            return {"reply": "⚠️ Invalid session. Please login again."}
 
-    messages = [{
-        "role": "system",
-        "content": "You are DESHITECH AI, created by VISHIST AMBASTHA. Never mention ChatGPT or OpenAI."
-    }]
+        user_id = payload["user_id"]
 
-    for m in memories[-10:]:
-        messages.append({"role": m.role, "content": m.content})
+        history = db.query(Memory).filter(Memory.user_id == user_id).all()
 
-    messages.append({"role": "user", "content": message})
+        messages = [{
+            "role": "system",
+            "content": (
+                "You are DESHITECH AI, a private AI assistant. "
+                "Created and owned by VISHIST AMBASTHA. "
+                "Never say ChatGPT or OpenAI."
+            )
+        }]
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages
-    )
+        for h in history[-10:]:
+            messages.append({"role": h.role, "content": h.content})
 
-    reply = response.choices[0].message.content
+        messages.append({"role": "user", "content": text})
 
-    db.add(Memory(user_id=user_id, role="user", content=message))
-    db.add(Memory(user_id=user_id, role="assistant", content=reply))
-    db.commit()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
 
-    return {"reply": reply}
+        reply = response.choices[0].message.content
+
+        db.add(Memory(user_id=user_id, role="user", content=text))
+        db.add(Memory(user_id=user_id, role="assistant", content=reply))
+        db.commit()
+
+        return {"reply": reply}
+
+    except Exception as e:
+        return {"reply": f"⚠️ Internal error: {str(e)}"}
