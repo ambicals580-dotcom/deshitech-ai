@@ -1,107 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>DESHITECH AI</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      background: #020617;
-      padding: 15px;
-      text-align: center;
-      font-weight: bold;
-    }
-    #chat {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-    }
-    .msg {
-      margin: 10px 0;
-      padding: 10px;
-      max-width: 75%;
-      border-radius: 8px;
-      line-height: 1.4;
-    }
-    .user {
-      background: #2563eb;
-      margin-left: auto;
-    }
-    .ai {
-      background: #020617;
-      border: 1px solid #1e293b;
-    }
-    footer {
-      display: flex;
-      padding: 10px;
-      background: #020617;
-    }
-    input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-    }
-    button {
-      margin-left: 10px;
-      padding: 10px 20px;
-      background: #22c55e;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-
-<header>
-  DESHITECH AI 🇮🇳 — by VISHIST AMBASTHA
-</header>
-
+<h1>DESHITECH AI 🇮🇳</h1>
 <div id="chat"></div>
 
-<footer>
-  <input id="msg" placeholder="Ask DESHITECH AI anything...">
-  <button onclick="send()">Send</button>
-</footer>
+<input id="msg">
+<button onclick="send()">Send</button>
 
 <script>
-const chat = document.getElementById("chat");
-
-function addMsg(text, cls){
-  let d = document.createElement("div");
-  d.className = "msg " + cls;
-  d.innerText = text;
-  chat.appendChild(d);
-  chat.scrollTop = chat.scrollHeight;
-}
-
 async function send(){
   let token = localStorage.getItem("token");
-  let text = msg.value;
-  if(!text) return;
-
-  addMsg(text, "user");
-  msg.value = "";
-
   let r = await fetch("/chat", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ message: text, token: token })
+    body: JSON.stringify({ message: msg.value, token: token })
   });
-
   let d = await r.json();
-  addMsg(d.reply, "ai");
+  chat.innerHTML += "<p>" + d.reply + "</p>";
 }
 </script>
-
-</body>
-</html>
