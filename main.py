@@ -1,71 +1,73 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-import os, json
+from fastapi import FastAPI, Request, Form, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy.orm import Session
 from openai import OpenAI
+import os
+
+from database import SessionLocal, User, Memory
+from auth import hash_password, authenticate
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI(title="DESHITECH AI")
 
-MEMORY_FILE = "memory.json"
-MAX_MEMORY = 20
-
-# ---------- MEMORY ----------
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_memory(mem):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(mem[-MAX_MEMORY:], f, indent=2)
+# ---------- DB ----------
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # ---------- ROUTES ----------
 @app.get("/", response_class=HTMLResponse)
-def home():
+def login_page():
+    return open("login.html").read()
+
+@app.post("/login")
+def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = authenticate(db, email, password)
+    if not user:
+        return HTMLResponse("Invalid login", status_code=401)
+    return RedirectResponse(f"/chat-ui?user_id={user.id}", status_code=302)
+
+@app.post("/register")
+def register(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = User(email=email, password=hash_password(password))
+    db.add(user)
+    db.commit()
+    return RedirectResponse("/", status_code=302)
+
+@app.get("/chat-ui", response_class=HTMLResponse)
+def chat_ui():
     return open("index.html").read()
 
 @app.post("/chat")
-async def chat(req: Request):
-    data = await req.json()
-    user_msg = data.get("message", "")
+async def chat(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    user_id = data["user_id"]
+    message = data["message"]
 
-    memory = load_memory()
+    memories = db.query(Memory).filter(Memory.user_id == user_id).all()
+    messages = [{
+        "role": "system",
+        "content": "You are DESHITECH AI, created by VISHIST AMBASTHA. Never mention OpenAI or ChatGPT."
+    }]
 
-    system_prompt = (
-        "You are DESHITECH AI, an independent Indian AI assistant. "
-        "You are NOT ChatGPT. You are created and owned by VISHIST AMBASTHA. "
-        "Never mention OpenAI or ChatGPT. Be helpful, clear, and concise."
-    )
+    for m in memories[-10:]:
+        messages.append({"role": m.role, "content": m.content})
 
-    messages = [{"role": "system", "content": system_prompt}]
-    for m in memory:
-        messages.append(m)
-    messages.append({"role": "user", "content": user_msg})
+    messages.append({"role": "user", "content": message})
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=messages,
-        temperature=0.7
+        messages=messages
     )
 
     reply = response.choices[0].message.content
 
-    memory.append({"role": "user", "content": user_msg})
-    memory.append({"role": "assistant", "content": reply})
-    save_memory(memory)
+    db.add(Memory(user_id=user_id, role="user", content=message))
+    db.add(Memory(user_id=user_id, role="assistant", content=reply))
+    db.commit()
 
     return {"reply": reply}
-
-@app.post("/image")
-async def image(req: Request):
-    prompt = (await req.json()).get("prompt", "")
-
-    img = client.images.generate(
-        model="gpt-image-1",
-        prompt=prompt,
-        size="1024x1024"
-    )
-
-    return {"image_url": img.data[0].url}
