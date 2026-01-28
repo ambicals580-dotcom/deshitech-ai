@@ -3,17 +3,16 @@
 
 <input id="msg">
 <button onclick="send()">Send</button>
+
 <pre id="out"></pre>
 
 <script>
-const user_id = new URLSearchParams(window.location.search).get("user_id");
-
 async function send(){
-  let m = msg.value;
+  let token = localStorage.getItem("token");
   let r = await fetch("/chat", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ message:m, user_id:user_id })
+    body:JSON.stringify({ message: msg.value, token: token })
   });
   let d = await r.json();
   out.innerText += "\n" + d.reply;
