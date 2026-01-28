@@ -1,52 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>DESHITECH AI – Login</title>
-  <style>
-    body {
-      background: #0f172a;
-      color: white;
-      font-family: Arial;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .box {
-      background: #020617;
-      padding: 30px;
-      width: 320px;
-      border-radius: 10px;
-      text-align: center;
-    }
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 6px;
-      border: none;
-    }
-    button {
-      background: #22c55e;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    h2 { margin-bottom: 5px; }
-    p { font-size: 13px; color: #94a3b8; }
-  </style>
-</head>
-<body>
-
-<div class="box">
-  <h2>DESHITECH AI 🇮🇳</h2>
-  <p>Created by VISHIST AMBASTHA</p>
-
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-
-  <button onclick="login()">Login</button>
-  <button onclick="register()">Register</button>
-</div>
+<h2>DESHITECH AI Login</h2>
+<input id="email" placeholder="Email"><br>
+<input id="password" type="password"><br>
+<button onclick="login()">Login</button>
+<button onclick="register()">Register</button>
 
 <script>
 async function login(){
@@ -57,7 +13,7 @@ async function login(){
   });
   let d = await r.json();
   localStorage.setItem("token", d.token);
-  window.location = "/chat-ui";
+  location.href="/chat-ui";
 }
 
 async function register(){
@@ -66,9 +22,6 @@ async function register(){
     headers:{ "Content-Type":"application/x-www-form-urlencoded" },
     body:`email=${email.value}&password=${password.value}`
   });
-  alert("Registered successfully. Now login.");
+  alert("Registered. Login now.");
 }
 </script>
-
-</body>
-</html>
