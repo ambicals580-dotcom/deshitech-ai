@@ -1,17 +1,34 @@
+import os
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-SECRET_KEY = "DESHITECH_SUPER_SECRET_KEY"
-ALGORITHM = "HS256"
-EXPIRE_MINUTES = 120
+# Load secret from environment (REQUIRED)
+SECRET_KEY = os.getenv("JWT_SECRET")
 
-def create_token(data: dict):
-    payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(minutes=EXPIRE_MINUTES)
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET environment variable is not set")
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 120
+
+
+def create_token(data: dict) -> str:
+    """
+    Create a JWT token with expiration
+    """
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def decode_token(token: str):
+    """
+    Decode and validate JWT token
+    Returns payload dict or None
+    """
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
     except JWTError:
-        return None
+        return None 
