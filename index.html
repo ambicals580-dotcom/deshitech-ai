@@ -1,18 +1,72 @@
-<h1>DESHITECH AI 🇮🇳</h1>
-<div id="chat"></div>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DESHITECH AI</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      width: 70%;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #22c55e;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #chat {
+      margin-top: 20px;
+    }
+    img {
+      margin-top: 10px;
+      border-radius: 10px;
+      width: 300px;
+    }
+  </style>
+</head>
 
-<input id="msg">
+<body>
+
+<h1>DESHITECH AI 🇮🇳</h1>
+<p>Designed & Owned by <b>VISHIST AMBASTHA</b></p>
+
+<input id="msg" placeholder="Ask me anything..." />
+<br>
 <button onclick="send()">Send</button>
+
+<div id="chat"></div>
 
 <script>
 async function send(){
-  let token = localStorage.getItem("token");
-  let r = await fetch("/chat", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ message: msg.value, token: token })
+  const token = localStorage.getItem("token");
+  const message = document.getElementById("msg").value;
+
+  const res = await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: message, token: token })
   });
-  let d = await r.json();
-  chat.innerHTML += "<p>" + d.reply + "</p>";
+
+  const data = await res.json();
+  const chat = document.getElementById("chat");
+
+  if (data.image) {
+    chat.innerHTML += `<p>${data.reply}</p>`;
+    chat.innerHTML += `<img src="${data.image}">`;
+  } else {
+    chat.innerHTML += `<p>${data.reply}</p>`;
+  }
+
+  document.getElementById("msg").value = "";
 }
-</script> 
+</script>
+
+</body>
+</html>
