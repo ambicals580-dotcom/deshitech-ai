@@ -2,6 +2,5 @@ fastapi
 uvicorn
 openai
 sqlalchemy
-passlib[bcrypt]
-python-multipart
-python-jose 
+python-jose
+pyjwt
