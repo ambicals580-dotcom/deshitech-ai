@@ -1,88 +1,73 @@
+import os
 from fastapi import FastAPI, Request, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-import os
-
-from db import get_db, Memory
-from jwt_handler import decode_token
 from openai import OpenAI
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from db import get_db, ChatMemory
+from jwt_handler import create_token, verify_token
 
 app = FastAPI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Serve frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+SYSTEM_PROMPT = (
+    "You are DESHITECH AI. "
+    "Owner: VISHIST AMBASTHA. "
+    "Never say ChatGPT or OpenAI."
+)
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    with open("static/index.html", "r", encoding="utf-8") as f:
+    with open("static/index.html", encoding="utf-8") as f:
         return f.read()
 
+# -------- LOGIN --------
+@app.post("/login")
+async def login(req: Request):
+    data = await req.json()
+    username = data.get("username")
+    if not username:
+        return {"error": "Username required"}
+    token = create_token(username)
+    return {"token": token}
 
+# -------- CHAT --------
 @app.post("/chat")
-async def chat(request: Request, db: Session = Depends(get_db)):
-    try:
-        data = await request.json()
-        token = data.get("token")
-        message = data.get("message", "").strip().lower()
+async def chat(req: Request, db: Session = Depends(get_db)):
+    data = await req.json()
+    token = data.get("token")
+    message = data.get("message")
 
-        if not token:
-            return {"reply": "⚠️ Please login again."}
+    user = verify_token(token)
+    if not user:
+        return {"reply": "⚠️ Invalid session. Please login again."}
 
-        payload = decode_token(token)
-        if not payload:
-            return {"reply": "⚠️ Invalid session. Please login again."}
-
-        user_id = payload["user_id"]
-
-        # 🖼️ IMAGE GENERATION
-        if any(w in message for w in ["image", "generate image", "logo", "poster", "design"]):
-            img = client.images.generate(
-                model="gpt-image-1",
-                prompt=message,
-                size="1024x1024"
-            )
-            image_url = img.data[0].url
-            return {
-                "reply": "🖼️ Image generated successfully",
-                "image": image_url
-            }
-
-        # 💬 CHAT (LLM)
-        history = db.query(Memory).filter(Memory.user_id == user_id).all()
-
-        messages = [{
-            "role": "system",
-            "content": (
-                "You are DESHITECH AI, an independent AI assistant. "
-                "Created and owned by VISHIST AMBASTHA. "
-                "Never say ChatGPT or OpenAI."
-            )
-        }]
-
-        for h in history[-10:]:
-            messages.append({"role": h.role, "content": h.content})
-
-        messages.append({"role": "user", "content": message})
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages
+    # IMAGE
+    if any(w in message.lower() for w in ["image", "logo", "poster", "design"]):
+        img = client.images.generate(
+            model="gpt-image-1",
+            prompt=message,
+            size="1024x1024"
         )
+        return {"image": img.data[0].url}
 
-        reply = response.choices[0].message.content
+    # MEMORY SAVE
+    db.add(ChatMemory(user=user, role="user", content=message))
+    db.commit()
 
-        db.add(Memory(user_id=user_id, role="user", content=message))
-        db.add(Memory(user_id=user_id, role="assistant", content=reply))
-        db.commit()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": message}
+        ]
+    )
 
-        return {"reply": reply}
+    reply = response.choices[0].message.content
+    db.add(ChatMemory(user=user, role="ai", content=reply))
+    db.commit()
 
-    except Exception as e:
-        return JSONResponse(
-            {"reply": f"⚠️ Server error: {str(e)}"},
-            status_code=500
-        )
+    return {"reply": reply}
