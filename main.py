@@ -1,57 +1,36 @@
-from fastapi import FastAPI, Request, Depends, Form
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from openai import OpenAI
 import os
 
-from database import SessionLocal, User, Memory
-from auth import hash_password, verify_password
-from jwt_handler import create_token, decode_token
+from db import get_db, Memory
+from jwt_handler import decode_token
+from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-app = FastAPI(title="DESHITECH AI")
+app = FastAPI()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Serve frontend
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.get("/", response_class=HTMLResponse)
-def login_page():
-    return open("login.html").read()
+def home():
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return f.read()
 
-@app.get("/chat-ui", response_class=HTMLResponse)
-def chat_ui():
-    return open("index.html").read()
-
-@app.post("/register")
-def register(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = User(email=email, password=hash_password(password))
-    db.add(user)
-    db.commit()
-    return {"ok": True}
-
-@app.post("/login")
-def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.password):
-        return JSONResponse({"error": "Invalid login"}, status_code=401)
-
-    token = create_token({"user_id": user.id})
-    return {"token": token}
 
 @app.post("/chat")
 async def chat(request: Request, db: Session = Depends(get_db)):
     try:
         data = await request.json()
         token = data.get("token")
-        text = data.get("message")
+        message = data.get("message", "").strip().lower()
 
         if not token:
-            return {"reply": "⚠️ Login expired. Please login again."}
+            return {"reply": "⚠️ Please login again."}
 
         payload = decode_token(token)
         if not payload:
@@ -59,12 +38,26 @@ async def chat(request: Request, db: Session = Depends(get_db)):
 
         user_id = payload["user_id"]
 
+        # 🖼️ IMAGE GENERATION
+        if any(w in message for w in ["image", "generate image", "logo", "poster", "design"]):
+            img = client.images.generate(
+                model="gpt-image-1",
+                prompt=message,
+                size="1024x1024"
+            )
+            image_url = img.data[0].url
+            return {
+                "reply": "🖼️ Image generated successfully",
+                "image": image_url
+            }
+
+        # 💬 CHAT (LLM)
         history = db.query(Memory).filter(Memory.user_id == user_id).all()
 
         messages = [{
             "role": "system",
             "content": (
-                "You are DESHITECH AI, a private AI assistant. "
+                "You are DESHITECH AI, an independent AI assistant. "
                 "Created and owned by VISHIST AMBASTHA. "
                 "Never say ChatGPT or OpenAI."
             )
@@ -73,7 +66,7 @@ async def chat(request: Request, db: Session = Depends(get_db)):
         for h in history[-10:]:
             messages.append({"role": h.role, "content": h.content})
 
-        messages.append({"role": "user", "content": text})
+        messages.append({"role": "user", "content": message})
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -82,11 +75,14 @@ async def chat(request: Request, db: Session = Depends(get_db)):
 
         reply = response.choices[0].message.content
 
-        db.add(Memory(user_id=user_id, role="user", content=text))
+        db.add(Memory(user_id=user_id, role="user", content=message))
         db.add(Memory(user_id=user_id, role="assistant", content=reply))
         db.commit()
 
         return {"reply": reply}
 
     except Exception as e:
-        return {"reply": f"⚠️ Internal error: {str(e)}"} 
+        return JSONResponse(
+            {"reply": f"⚠️ Server error: {str(e)}"},
+            status_code=500
+        )
