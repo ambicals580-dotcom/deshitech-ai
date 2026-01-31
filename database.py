@@ -23,4 +23,4 @@ class Memory(Base):
     role = Column(String)
     content = Column(Text)
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine) 
