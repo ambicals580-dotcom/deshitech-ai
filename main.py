@@ -89,4 +89,4 @@ async def chat(request: Request, db: Session = Depends(get_db)):
         return {"reply": reply}
 
     except Exception as e:
-        return {"reply": f"⚠️ Internal error: {str(e)}"}
+        return {"reply": f"⚠️ Internal error: {str(e)}"} 
